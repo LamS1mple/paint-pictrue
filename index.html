@@ -3,1052 +3,698 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PixelWar — Vẽ Cùng Nhau</title>
+<title>PixelWar</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
-
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --panel: #1a1a28;
-    --border: #2a2a42;
-    --accent: #ff3e6c;
-    --accent2: #00e5ff;
-    --accent3: #b967ff;
-    --text: #e0e0f0;
-    --text-dim: #6a6a8a;
-    --pixel: 14px;
-    --grid-cols: 60;
-    --grid-rows: 40;
+    --bg:#0a0a0f;--surface:#12121a;--panel:#1a1a28;--border:#2a2a42;
+    --accent:#ff3e6c;--accent2:#00e5ff;--accent3:#b967ff;
+    --text:#e0e0f0;--text-dim:#6a6a8a;--pixel:13px;
   }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);pointer-events:none;z-index:1000}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--surface);border-bottom:2px solid var(--accent);box-shadow:0 0 20px rgba(255,62,108,0.3);flex-shrink:0;z-index:10}
+  .logo{font-family:'Press Start 2P',monospace;font-size:12px;color:var(--accent);text-shadow:0 0 10px var(--accent);letter-spacing:2px}
+  .logo span{color:var(--accent2)}
+  .hstats{display:flex;gap:16px;font-size:10px;color:var(--text-dim);align-items:center}
+  .hstats b{color:var(--text)}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px}
+  .dot.g{background:#00ff88;box-shadow:0 0 6px #00ff88;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    user-select: none;
-  }
+  /* JOIN SCREEN */
+  #joinScreen{position:fixed;inset:0;background:rgba(10,10,15,0.97);display:flex;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(4px)}
+  .join-box{background:var(--panel);border:2px solid var(--accent);border-radius:8px;padding:32px;width:320px;box-shadow:0 0 40px rgba(255,62,108,0.3);text-align:center}
+  .join-box h2{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--accent);margin-bottom:6px;line-height:1.8}
+  .join-box p{font-size:10px;color:var(--text-dim);margin-bottom:24px}
+  .join-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:14px;padding:10px 12px;border-radius:4px;outline:none;text-align:center;margin-bottom:8px}
+  .join-input:focus{border-color:var(--accent2);box-shadow:0 0 10px rgba(0,229,255,0.2)}
+  .color-pick-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+  .color-pick-btn{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s}
+  .color-pick-btn:hover{transform:scale(1.2)}
+  .color-pick-btn.sel{border-color:white;box-shadow:0 0 8px rgba(255,255,255,.6);transform:scale(1.2)}
+  .join-btn{width:100%;padding:12px;background:var(--accent);border:none;color:white;font-family:'Press Start 2P',monospace;font-size:9px;border-radius:4px;cursor:pointer;letter-spacing:1px;transition:all .2s}
+  .join-btn:hover{box-shadow:0 0 20px rgba(255,62,108,.5);transform:translateY(-1px)}
+  .rules{margin-top:14px;font-size:9px;color:var(--text-dim);line-height:1.8;text-align:left;background:var(--surface);padding:10px;border-radius:4px;border:1px solid var(--border)}
+  .rules span{color:var(--accent2)}
 
-  /* Scanline overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.08) 2px,
-      rgba(0,0,0,0.08) 4px
-    );
-    pointer-events: none;
-    z-index: 1000;
-  }
+  .main{display:flex;flex:1;overflow:hidden}
 
-  /* Header */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background: var(--surface);
-    border-bottom: 2px solid var(--accent);
-    box-shadow: 0 0 20px rgba(255,62,108,0.3);
-    z-index: 10;
-    flex-shrink: 0;
-  }
+  /* PANELS */
+  .panel-left{width:200px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+  .panel-right{width:190px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+  .psec{padding:10px 12px;border-bottom:1px solid var(--border)}
+  .ptitle{font-family:'Press Start 2P',monospace;font-size:6.5px;color:var(--accent3);margin-bottom:8px;letter-spacing:1px}
 
-  .logo {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 13px;
-    color: var(--accent);
-    text-shadow: 0 0 10px var(--accent), 0 0 30px rgba(255,62,108,0.5);
-    letter-spacing: 2px;
-  }
+  /* PALETTE */
+  .palette{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+  .cc{aspect-ratio:1;border-radius:2px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s}
+  .cc:hover{transform:scale(1.15)}
+  .cc.sel{border-color:#fff;box-shadow:0 0 6px rgba(255,255,255,.6);transform:scale(1.15)}
 
-  .logo span { color: var(--accent2); }
+  /* TOOLS */
+  .tools{display:flex;gap:5px}
+  .tbtn{flex:1;padding:7px 2px;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-size:16px;cursor:pointer;border-radius:3px;text-align:center;transition:all .15s}
+  .tbtn:hover,.tbtn.act{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 0 10px rgba(255,62,108,.35)}
 
-  .header-stats {
-    display: flex;
-    gap: 20px;
-    font-size: 11px;
-    color: var(--text-dim);
-  }
+  /* BRUSH */
+  .bsizes{display:flex;gap:6px;align-items:center}
+  .bsbtn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:var(--surface);border:1px solid var(--border);border-radius:3px;cursor:pointer;transition:all .15s}
+  .bsbtn:hover,.bsbtn.act{border-color:var(--accent2);box-shadow:0 0 8px rgba(0,229,255,.3)}
+  .bdot{background:var(--text);border-radius:50%}
 
-  .stat {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+  /* USERS */
+  .ulist{display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto}
+  .uitem{display:flex;align-items:center;gap:7px;font-size:10px;padding:4px 6px;border-radius:3px;background:var(--surface);border:1px solid transparent}
+  .uitem.me{border-color:var(--accent)}
+  .uavatar{width:18px;height:18px;border-radius:2px;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold}
+  .uname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .upx{color:var(--text-dim);font-size:9px;flex-shrink:0}
 
-  .stat-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
+  /* CANVAS */
+  .canvas-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;background:var(--bg);position:relative}
+  .canvas-wrapper{transform-origin:center;transition:transform .1s}
+  #pixelCanvas{display:grid;grid-template-columns:repeat(60,var(--pixel));grid-template-rows:repeat(40,var(--pixel));border:1px solid var(--border);box-shadow:0 0 0 1px var(--border),0 0 40px rgba(0,0,0,.8);cursor:crosshair;image-rendering:pixelated}
+  .pixel{width:var(--pixel);height:var(--pixel);background:#1e1e2e;border:.5px solid rgba(255,255,255,.03);position:relative}
+  .pixel:hover::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.22);pointer-events:none}
+  @keyframes placed{0%{filter:brightness(2.5)}100%{filter:brightness(1)}}
+  .placed{animation:placed .35s ease-out}
 
-  .stat-dot.online { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
-  .stat-dot.timer { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+  /* ZOOM */
+  .zoom-ctrl{position:absolute;bottom:14px;right:14px;display:flex;flex-direction:column;gap:3px;z-index:5}
+  .zbtn{width:34px;height:34px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:17px;cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .zbtn:hover{background:var(--accent);border-color:var(--accent)}
 
-  .stat-val { color: var(--text); font-weight: bold; }
+  /* COOLDOWN TIMER — BIG */
+  .cd-area{padding:12px;border-bottom:1px solid var(--border);text-align:center}
+  .cd-circle-wrap{position:relative;width:80px;height:80px;margin:0 auto 8px}
+  .cd-svg{transform:rotate(-90deg)}
+  .cd-bg{fill:none;stroke:var(--surface);stroke-width:6}
+  .cd-prog{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;stroke-dasharray:220;stroke-dashoffset:0;transition:stroke-dashoffset .1s linear;filter:drop-shadow(0 0 6px var(--accent))}
+  .cd-prog.ready{stroke:var(--accent2);filter:drop-shadow(0 0 6px var(--accent2))}
+  .cd-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:11px;color:var(--text)}
+  .cd-label{font-size:9px;color:var(--text-dim);letter-spacing:1px}
+  .cd-ready-txt{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--accent2);margin-top:4px;animation:blink .6s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-  }
+  /* FEED */
+  .feed{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
+  .fitem{font-size:9.5px;padding:3px 5px;border-left:2px solid transparent;line-height:1.5;animation:fin .25s ease-out}
+  @keyframes fin{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+  .fcoords{color:var(--text-dim)}
 
-  /* Main layout */
-  .main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    gap: 0;
-  }
+  /* MINI MAP */
+  .mini-map{width:100%;aspect-ratio:3/2;image-rendering:pixelated;border:1px solid var(--border);border-radius:2px}
 
-  /* Left panel */
-  .panel-left {
-    width: 220px;
-    background: var(--panel);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
+  ::-webkit-scrollbar{width:3px}
+  ::-webkit-scrollbar-track{background:var(--surface)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-  .panel-section {
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-  }
+  .tooltip{position:fixed;background:var(--panel);border:1px solid var(--border);padding:3px 8px;font-size:9px;border-radius:3px;pointer-events:none;z-index:999;display:none;color:var(--text-dim)}
 
-  .panel-title {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    color: var(--accent3);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-  }
+  .notif{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--accent);padding:7px 16px;font-size:10px;border-radius:4px;z-index:998;box-shadow:0 0 20px rgba(255,62,108,.3);animation:nfx 2.2s ease-in-out forwards;white-space:nowrap}
+  @keyframes nfx{0%{opacity:0;top:46px}15%{opacity:1;top:56px}80%{opacity:1;top:56px}100%{opacity:0;top:64px}}
 
-  /* Color palette */
-  .palette {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 4px;
-  }
-
-  .color-cell {
-    aspect-ratio: 1;
-    border-radius: 2px;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: transform 0.1s, border-color 0.1s;
-    position: relative;
-  }
-
-  .color-cell:hover { transform: scale(1.15); }
-  .color-cell.selected {
-    border-color: white;
-    box-shadow: 0 0 8px rgba(255,255,255,0.6);
-    transform: scale(1.15);
-  }
-
-  /* Tools */
-  .tools {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-
-  .tool-btn {
-    flex: 1;
-    min-width: 40px;
-    padding: 8px 4px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 18px;
-    cursor: pointer;
-    border-radius: 4px;
-    text-align: center;
-    transition: all 0.15s;
-  }
-
-  .tool-btn:hover, .tool-btn.active {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
-    box-shadow: 0 0 12px rgba(255,62,108,0.4);
-  }
-
-  /* Brush size */
-  .brush-sizes {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .brush-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .brush-btn:hover, .brush-btn.active {
-    border-color: var(--accent2);
-    box-shadow: 0 0 8px rgba(0,229,255,0.3);
-  }
-
-  .brush-dot {
-    background: var(--text);
-    border-radius: 50%;
-  }
-
-  /* Online users */
-  .users-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  .user-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    padding: 4px 6px;
-    border-radius: 4px;
-    background: var(--surface);
-    border: 1px solid transparent;
-    transition: border-color 0.2s;
-  }
-
-  .user-item.me { border-color: var(--accent); }
-
-  .user-avatar {
-    width: 20px;
-    height: 20px;
-    border-radius: 2px;
-    flex-shrink: 0;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .user-name { flex: 1; color: var(--text); }
-  .user-pixels { color: var(--text-dim); font-size: 10px; }
-
-  /* Canvas area */
-  .canvas-area {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: auto;
-    background: var(--bg);
-    background-image:
-      radial-gradient(circle at 20% 30%, rgba(255,62,108,0.03) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(0,229,255,0.03) 0%, transparent 50%);
-    position: relative;
-  }
-
-  .canvas-wrapper {
-    position: relative;
-    transform-origin: center;
-  }
-
-  #pixelCanvas {
-    display: grid;
-    grid-template-columns: repeat(var(--grid-cols), var(--pixel));
-    grid-template-rows: repeat(var(--grid-rows), var(--pixel));
-    border: 1px solid var(--border);
-    box-shadow:
-      0 0 0 1px var(--border),
-      0 0 40px rgba(0,0,0,0.8),
-      0 0 80px rgba(0,0,0,0.4);
-    cursor: crosshair;
-    image-rendering: pixelated;
-  }
-
-  .pixel {
-    width: var(--pixel);
-    height: var(--pixel);
-    background: #1e1e2e;
-    border: 0.5px solid rgba(255,255,255,0.04);
-    transition: none;
-    position: relative;
-  }
-
-  .pixel:hover::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255,255,255,0.25);
-    pointer-events: none;
-  }
-
-  .pixel.just-placed {
-    animation: placePixel 0.3s ease-out;
-  }
-
-  @keyframes placePixel {
-    0% { filter: brightness(2); transform: scale(1.3); }
-    100% { filter: brightness(1); transform: scale(1); }
-  }
-
-  /* Right panel */
-  .panel-right {
-    width: 200px;
-    background: var(--panel);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
-
-  /* Activity feed */
-  .activity-feed {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-height: 300px;
-    overflow-y: auto;
-  }
-
-  .activity-item {
-    font-size: 10px;
-    padding: 4px 6px;
-    border-left: 2px solid transparent;
-    animation: slideIn 0.3s ease-out;
-    line-height: 1.4;
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-8px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
-  .activity-item .user-color { font-weight: bold; }
-  .activity-item .coords { color: var(--text-dim); }
-
-  /* Cooldown bar */
-  .cooldown-area {
-    padding: 12px;
-    border-top: 1px solid var(--border);
-    margin-top: auto;
-  }
-
-  .cooldown-label {
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .cooldown-bar {
-    height: 6px;
-    background: var(--surface);
-    border-radius: 3px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-  }
-
-  .cooldown-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent3));
-    border-radius: 3px;
-    transition: width 0.1s linear;
-    width: 100%;
-    box-shadow: 0 0 8px rgba(255,62,108,0.5);
-  }
-
-  /* Zoom controls */
-  .zoom-controls {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    z-index: 5;
-  }
-
-  .zoom-btn {
-    width: 36px;
-    height: 36px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 18px;
-    cursor: pointer;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-  }
-
-  .zoom-btn:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--surface); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--accent3); }
-
-  /* Tooltip */
-  .tooltip {
-    position: fixed;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    padding: 4px 8px;
-    font-size: 10px;
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 999;
-    display: none;
-    color: var(--text-dim);
-  }
-
-  /* My name input */
-  .name-input {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    padding: 6px 8px;
-    border-radius: 4px;
-    width: 100%;
-    outline: none;
-  }
-
-  .name-input:focus { border-color: var(--accent2); box-shadow: 0 0 8px rgba(0,229,255,0.2); }
-
-  /* Notification */
-  .notif {
-    position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--panel);
-    border: 1px solid var(--accent);
-    padding: 8px 16px;
-    font-size: 11px;
-    border-radius: 4px;
-    z-index: 999;
-    box-shadow: 0 0 20px rgba(255,62,108,0.3);
-    animation: notifAnim 2s ease-in-out forwards;
-  }
-
-  @keyframes notifAnim {
-    0% { opacity: 0; top: 50px; }
-    20% { opacity: 1; top: 60px; }
-    80% { opacity: 1; top: 60px; }
-    100% { opacity: 0; top: 70px; }
-  }
-
-  .mini-map {
-    width: 100%;
-    aspect-ratio: 3/2;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    image-rendering: pixelated;
-  }
+  /* LOCKED overlay on pixel */
+  .pixel.locked-flash{animation:lockflash .4s ease-out}
+  @keyframes lockflash{0%{filter:brightness(3) saturate(0)}100%{filter:brightness(1)}}
 </style>
 </head>
 <body>
 
+<!-- JOIN SCREEN -->
+<div id="joinScreen">
+  <div class="join-box">
+    <h2>⚔️ PIXEL WAR</h2>
+    <p>Canvas vẽ pixel nhiều người chơi</p>
+    <input class="join-input" id="joinName" maxlength="12" placeholder="Tên của bạn..." autofocus>
+    <div class="color-pick-row" id="colorPickRow"></div>
+    <button class="join-btn" onclick="joinGame()">▶ THAM GIA</button>
+    <div class="rules">
+      <span>📜 LUẬT CHƠI</span><br>
+      • Mỗi lần tô màu cách nhau <span>30 giây</span><br>
+      • Dùng công cụ Fill bị <span>+5 giây</span> phạt<br>
+      • Click phải để hút màu<br>
+      • Cuộn chuột để zoom
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="logo">Pixel<span>War</span></div>
-  <div class="header-stats">
-    <div class="stat">
-      <div class="stat-dot online"></div>
-      <span>Online: </span>
-      <span class="stat-val" id="onlineCount">1</span>
-    </div>
-    <div class="stat">
-      <div class="stat-dot timer"></div>
-      <span>Pixels: </span>
-      <span class="stat-val" id="totalPixels">0</span>
-    </div>
-    <div class="stat">
-      <span>Zoom: </span>
-      <span class="stat-val" id="zoomDisplay">100%</span>
-    </div>
+  <div class="hstats">
+    <span><span class="dot g"></span><b id="hOnline">0</b> online</span>
+    <span>🎨 <b id="hTotal">0</b> pixels</span>
+    <span>🔍 <b id="hZoom">100</b>%</span>
+    <span id="hCoords" style="color:var(--text-dim)">—</span>
   </div>
 </header>
 
 <div class="main">
-  <!-- Left Panel -->
+  <!-- LEFT -->
   <div class="panel-left">
-    <div class="panel-section">
-      <div class="panel-title">👤 Tên của bạn</div>
-      <input class="name-input" id="myName" type="text" maxlength="12" placeholder="Nhập tên...">
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-title">🎨 Màu sắc</div>
+    <div class="psec">
+      <div class="ptitle">🎨 BẢNG MÀU</div>
       <div class="palette" id="palette"></div>
     </div>
-
-    <div class="panel-section">
-      <div class="panel-title">🖊 Màu tuỳ chọn</div>
-      <input type="color" id="customColor" style="width:100%;height:32px;border:1px solid var(--border);background:var(--surface);cursor:pointer;border-radius:4px;" value="#ffffff">
+    <div class="psec">
+      <div class="ptitle">🖊 MÀU TUỲ CHỌN</div>
+      <input type="color" id="customColor" style="width:100%;height:30px;border:1px solid var(--border);background:var(--surface);cursor:pointer;border-radius:3px;" value="#ffffff">
     </div>
-
-    <div class="panel-section">
-      <div class="panel-title">🛠 Công cụ</div>
+    <div class="psec">
+      <div class="ptitle">🛠 CÔNG CỤ</div>
       <div class="tools">
-        <button class="tool-btn active" id="toolPen" title="Bút">✏️</button>
-        <button class="tool-btn" id="toolEraser" title="Tẩy">🧹</button>
-        <button class="tool-btn" id="toolFill" title="Tô màu vùng">🪣</button>
-        <button class="tool-btn" id="toolPicker" title="Hút màu">💉</button>
+        <button class="tbtn act" id="toolPen" title="Bút">✏️</button>
+        <button class="tbtn" id="toolEraser" title="Tẩy">🧹</button>
+        <button class="tbtn" id="toolFill" title="Tô vùng (+5s)">🪣</button>
+        <button class="tbtn" id="toolPicker" title="Hút màu">💉</button>
       </div>
     </div>
-
-    <div class="panel-section">
-      <div class="panel-title">📐 Kích thước bút</div>
-      <div class="brush-sizes">
-        <div class="brush-btn active" data-size="1"><div class="brush-dot" style="width:4px;height:4px"></div></div>
-        <div class="brush-btn" data-size="2"><div class="brush-dot" style="width:8px;height:8px"></div></div>
-        <div class="brush-btn" data-size="3"><div class="brush-dot" style="width:12px;height:12px"></div></div>
-        <div class="brush-btn" data-size="5"><div class="brush-dot" style="width:18px;height:18px"></div></div>
+    <div class="psec">
+      <div class="ptitle">📐 KÍCH THƯỚC BÚT</div>
+      <div class="bsizes">
+        <div class="bsbtn act" data-size="1"><div class="bdot" style="width:4px;height:4px"></div></div>
+        <div class="bsbtn" data-size="2"><div class="bdot" style="width:8px;height:8px"></div></div>
+        <div class="bsbtn" data-size="3"><div class="bdot" style="width:12px;height:12px"></div></div>
+        <div class="bsbtn" data-size="5"><div class="bdot" style="width:18px;height:18px"></div></div>
       </div>
     </div>
-
-    <div class="panel-section">
-      <div class="panel-title">👥 Online</div>
-      <div class="users-list" id="usersList"></div>
+    <div class="psec">
+      <div class="ptitle">👥 ONLINE</div>
+      <div class="ulist" id="usersList"></div>
     </div>
-
-    <div class="panel-section">
-      <div class="panel-title">🗺 Bản đồ nhỏ</div>
-      <canvas class="mini-map" id="miniMap" width="180" height="120"></canvas>
-    </div>
-
-    <div class="panel-section">
-      <button class="tool-btn" style="width:100%;font-size:11px;padding:8px;" onclick="clearCanvas()">🗑 Xóa canvas</button>
+    <div class="psec">
+      <div class="ptitle">🗺 BẢN ĐỒ NHỎ</div>
+      <canvas class="mini-map" id="miniMap" width="176" height="117"></canvas>
     </div>
   </div>
 
-  <!-- Canvas -->
+  <!-- CANVAS -->
   <div class="canvas-area" id="canvasArea">
     <div class="canvas-wrapper" id="canvasWrapper">
       <div id="pixelCanvas"></div>
     </div>
-    <div class="zoom-controls">
-      <button class="zoom-btn" onclick="zoom(1.25)">+</button>
-      <button class="zoom-btn" onclick="zoom(0.8)">−</button>
-      <button class="zoom-btn" onclick="resetZoom()" title="Reset">⟳</button>
+    <div class="zoom-ctrl">
+      <button class="zbtn" onclick="zoom(1.2)">+</button>
+      <button class="zbtn" onclick="zoom(0.83)">−</button>
+      <button class="zbtn" onclick="resetZoom()">⟳</button>
     </div>
   </div>
 
-  <!-- Right Panel -->
+  <!-- RIGHT -->
   <div class="panel-right">
-    <div class="panel-section" style="flex:1">
-      <div class="panel-title">📡 Hoạt động</div>
-      <div class="activity-feed" id="activityFeed"></div>
-    </div>
-
-    <div class="cooldown-area">
-      <div class="cooldown-label">
-        <span>Cooldown</span>
-        <span id="cooldownText">Sẵn sàng ✓</span>
+    <div class="cd-area psec">
+      <div class="ptitle">⏱ COOLDOWN (30s)</div>
+      <div class="cd-circle-wrap">
+        <svg class="cd-svg" width="80" height="80" viewBox="0 0 80 80">
+          <circle class="cd-bg" cx="40" cy="40" r="35"/>
+          <circle class="cd-prog" id="cdProg" cx="40" cy="40" r="35"/>
+        </svg>
+        <div class="cd-text" id="cdText">—</div>
       </div>
-      <div class="cooldown-bar">
-        <div class="cooldown-fill" id="cooldownFill" style="width:100%"></div>
-      </div>
+      <div class="cd-label" id="cdLabel">CHỜ THAM GIA</div>
+      <div class="cd-ready-txt" id="cdReady" style="display:none">✓ SẴN SÀNG!</div>
     </div>
+    <div class="psec" style="padding-bottom:6px">
+      <div class="ptitle">📡 HOẠT ĐỘNG</div>
+    </div>
+    <div class="feed" id="feed"></div>
   </div>
 </div>
 
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-// =========================================
-//  CONFIG
-// =========================================
+// =============================================
+//  CONSTANTS
+// =============================================
 const COLS = 60, ROWS = 40;
-const COOLDOWN_MS = 300; // ms between pixel placements (can be tuned)
+const COOLDOWN = 30000; // 30 seconds
+const FILL_PENALTY = 5000; // extra 5s for fill tool
+const CIRCUMFERENCE = 2 * Math.PI * 35; // ~220
 
-// =========================================
+// =============================================
 //  STATE
-// =========================================
-const pixelData = new Array(COLS * ROWS).fill('#1e1e2e');
-let currentColor = '#ff3e6c';
-let currentTool = 'pen';
-let brushSize = 1;
-let isDrawing = false;
-let scale = 1;
-let cooldownRemaining = 0;
-let totalPixelsPlaced = 0;
-let myPixelsPlaced = 0;
+// =============================================
+const pixels = new Array(COLS * ROWS).fill('#1e1e2e');
+let myId = null, myName = 'Player', myColor = '#ff3e6c';
+let currentColor = '#ff3e6c', currentTool = 'pen', brushSize = 1;
+let isDrawing = false, scale = 1;
+let nextAllowedTime = 0; // timestamp when I can place next pixel
+let cdInterval = null;
+let totalPixels = 0;
 
-// Simulated users (bots + me)
-const ME_ID = 'me';
-const botNames = ['PixelKun', 'NhanHoa', 'ChibiArt', 'VietDraw', 'TuanPix', 'MaiColor', 'HungBit', 'LinhPX'];
-const botColors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff922b','#cc5de8','#20c997','#f06595'];
+// Simulated shared state (IndexedDB / BroadcastChannel for cross-tab)
+const BC = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('pixelwar') : null;
 
-let users = [
-  { id: ME_ID, name: 'Bạn', color: '#ff3e6c', pixels: 0, me: true }
-];
+// Users map: id -> {name, color, pixels, lastSeen}
+const usersMap = new Map();
 
-// Spawn bots
-let activeBots = [];
-let nextBotId = 1;
-
-function spawnBot() {
-  if (activeBots.length >= 5) return;
-  const i = Math.floor(Math.random() * botNames.length);
-  const bot = {
-    id: 'bot_' + (nextBotId++),
-    name: botNames[i] + Math.floor(Math.random()*99),
-    color: botColors[i % botColors.length],
-    pixels: 0,
-    me: false
-  };
-  activeBots.push(bot);
-  users.push(bot);
-  renderUsers();
-  addActivity(bot, -1, -1, 'joined');
-}
-
-function removeBot() {
-  if (activeBots.length === 0) return;
-  const idx = Math.floor(Math.random() * activeBots.length);
-  const bot = activeBots[idx];
-  activeBots.splice(idx, 1);
-  users = users.filter(u => u.id !== bot.id);
-  renderUsers();
-  addActivity(bot, -1, -1, 'left');
-}
-
-// =========================================
+// =============================================
 //  PALETTE
-// =========================================
-const PALETTE = [
-  '#000000','#1a1a2e','#16213e','#0f3460',
-  '#533483','#e94560','#ff6b6b','#ff8e53',
-  '#ffd93d','#c8f441','#6bcb77','#4d96ff',
-  '#00e5ff','#ffffff','#cccccc','#888888',
-  '#555555','#b967ff','#f7a072','#ff3e6c',
-  '#20c997','#74c0fc','#ff922b','#cc5de8',
-  '#f06595','#a9e34b','#4dabf7','#ffd43b',
-  '#63e6be','#e599f7','#ffa8a8','#74b816',
+// =============================================
+const PAL = [
+  '#000000','#1a1a2e','#16213e','#0f3460','#533483','#e94560','#ff6b6b','#ff8e53',
+  '#ffd93d','#c8f441','#6bcb77','#4d96ff','#00e5ff','#ffffff','#cccccc','#888888',
+  '#555555','#b967ff','#f7a072','#ff3e6c','#20c997','#74c0fc','#ff922b','#cc5de8',
+  '#f06595','#a9e34b','#4dabf7','#ffd43b','#63e6be','#e599f7','#ffa8a8','#74b816',
   '#1098ad','#d9480f','#495057','#2b2d42',
 ];
+const PICK_COLORS = ['#ff3e6c','#ff922b','#ffd93d','#6bcb77','#4d96ff','#b967ff','#00e5ff','#f06595','#20c997','#ffffff'];
 
 function buildPalette() {
   const el = document.getElementById('palette');
-  PALETTE.forEach(c => {
-    const cell = document.createElement('div');
-    cell.className = 'color-cell';
-    cell.style.background = c;
-    if (c === currentColor) cell.classList.add('selected');
-    cell.addEventListener('click', () => selectColor(c, cell));
-    el.appendChild(cell);
+  PAL.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cc'; d.style.background = c;
+    if (c === currentColor) d.classList.add('sel');
+    d.onclick = () => selectColor(c, d);
+    el.appendChild(d);
+  });
+}
+
+function buildColorPicker() {
+  const row = document.getElementById('colorPickRow');
+  PICK_COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-pick-btn';
+    d.style.background = c;
+    if (c === myColor) d.classList.add('sel');
+    d.onclick = () => { myColor = c; document.querySelectorAll('.color-pick-btn').forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); };
+    row.appendChild(d);
   });
 }
 
 function selectColor(c, cell) {
   currentColor = c;
-  document.querySelectorAll('.color-cell').forEach(el => el.classList.remove('selected'));
-  if (cell) cell.classList.add('selected');
+  document.querySelectorAll('.cc').forEach(e=>e.classList.remove('sel'));
+  if (cell) cell.classList.add('sel');
+  document.getElementById('customColor').value = c;
   if (currentTool === 'eraser') setTool('pen');
 }
 
-document.getElementById('customColor').addEventListener('input', e => {
-  selectColor(e.target.value, null);
-});
+document.getElementById('customColor').addEventListener('input', e => selectColor(e.target.value, null));
 
-// =========================================
-//  BUILD PIXEL GRID
-// =========================================
-function buildGrid() {
-  const canvas = document.getElementById('pixelCanvas');
-  canvas.innerHTML = '';
-  for (let i = 0; i < COLS * ROWS; i++) {
-    const px = document.createElement('div');
-    px.className = 'pixel';
-    px.dataset.i = i;
-    const col = i % COLS, row = Math.floor(i / COLS);
-    px.dataset.col = col;
-    px.dataset.row = row;
-    canvas.appendChild(px);
-  }
+// =============================================
+//  JOIN
+// =============================================
+function joinGame() {
+  const n = document.getElementById('joinName').value.trim();
+  myName = n || ('Player' + Math.floor(Math.random()*999));
+  myId = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  currentColor = myColor;
 
-  canvas.addEventListener('mousedown', e => { if (e.button === 0) { isDrawing = true; handlePixelEvent(e); } });
-  canvas.addEventListener('mousemove', e => { if (isDrawing) handlePixelEvent(e); showTooltip(e); });
-  canvas.addEventListener('mouseup', () => isDrawing = false);
-  canvas.addEventListener('mouseleave', () => { isDrawing = false; document.getElementById('tooltip').style.display = 'none'; });
-  canvas.addEventListener('contextmenu', e => { e.preventDefault(); pickColor(e); });
+  document.getElementById('joinScreen').style.display = 'none';
+  usersMap.set(myId, {name: myName, color: myColor, pixels: 0, lastSeen: Date.now(), me: true});
+  renderUsers();
+  broadcastPresence();
+  startCooldownTimer();
+  addFeed({name: myName, color: myColor}, -1, -1, 'joined');
+  showNotif('🎮 Chào mừng ' + myName + '!');
+
+  // Presence ping every 5s
+  setInterval(broadcastPresence, 5000);
+  // Clean stale users every 10s
+  setInterval(cleanStaleUsers, 10000);
 }
 
-function handlePixelEvent(e) {
-  const px = e.target.closest('.pixel');
-  if (!px) return;
-  const i = parseInt(px.dataset.i);
-  const col = parseInt(px.dataset.col);
-  const row = parseInt(px.dataset.row);
+document.getElementById('joinName').addEventListener('keydown', e => { if (e.key === 'Enter') joinGame(); });
 
-  if (currentTool === 'picker') { pickColorFromPixel(i); return; }
-  if (currentTool === 'fill') { floodFill(col, row, currentColor); return; }
-  if (cooldownRemaining > 0 && currentTool !== 'eraser') return;
-
-  const color = currentTool === 'eraser' ? '#1e1e2e' : currentColor;
-  placePixelBrush(col, row, color, ME_ID);
+// =============================================
+//  BROADCAST CHANNEL (cross-tab multiplayer)
+// =============================================
+function broadcast(msg) {
+  if (BC) BC.postMessage(msg);
 }
 
-function placePixelBrush(cx, cy, color, userId) {
-  const half = Math.floor(brushSize / 2);
-  for (let dy = -half; dy <= half; dy++) {
-    for (let dx = -half; dx <= half; dx++) {
-      const col = cx + dx, row = cy + dy;
-      if (col < 0 || col >= COLS || row < 0 || row >= ROWS) continue;
-      placePixel(col, row, color, userId);
+function broadcastPresence() {
+  if (!myId) return;
+  broadcast({ type: 'presence', id: myId, name: myName, color: myColor,
+    pixels: (usersMap.get(myId)||{pixels:0}).pixels, ts: Date.now() });
+}
+
+function broadcastPixel(col, row, color) {
+  broadcast({ type: 'pixel', id: myId, name: myName, color: myColor, col, row, pixColor: color, ts: Date.now() });
+}
+
+if (BC) BC.onmessage = e => {
+  const m = e.data;
+  if (!m || !m.id || m.id === myId) return;
+
+  if (m.type === 'presence') {
+    const existing = usersMap.get(m.id);
+    usersMap.set(m.id, { name: m.name, color: m.color, pixels: m.pixels, lastSeen: m.ts, me: false });
+    if (!existing) {
+      addFeed({name: m.name, color: m.color}, -1, -1, 'joined');
     }
-  }
-  if (userId === ME_ID) startCooldown();
-}
-
-function placePixel(col, row, color, userId) {
-  const i = row * COLS + col;
-  pixelData[i] = color;
-  const els = document.querySelectorAll(`.pixel[data-i="${i}"]`);
-  els.forEach(px => {
-    px.style.background = color;
-    px.classList.remove('just-placed');
-    void px.offsetWidth; // reflow
-    px.classList.add('just-placed');
-  });
-
-  const user = users.find(u => u.id === userId);
-  if (user) {
-    user.pixels++;
-    if (userId === ME_ID) {
-      myPixelsPlaced++;
-      document.querySelector(`#usersList .user-item.me .user-pixels`).textContent = user.pixels + ' px';
-    }
-  }
-
-  totalPixelsPlaced++;
-  document.getElementById('totalPixels').textContent = totalPixelsPlaced;
-  updateMiniMap(col, row, color);
-
-  if (userId !== ME_ID && user) {
-    addActivity(user, col, row, 'pixel');
-  }
-}
-
-// =========================================
-//  FLOOD FILL
-// =========================================
-function floodFill(startCol, startRow, newColor) {
-  const i = startRow * COLS + startCol;
-  const targetColor = pixelData[i];
-  if (targetColor === newColor) return;
-  if (cooldownRemaining > 0) return;
-
-  const queue = [[startCol, startRow]];
-  const visited = new Set();
-
-  while (queue.length > 0) {
-    const [col, row] = queue.shift();
-    const idx = row * COLS + col;
-    if (visited.has(idx)) continue;
-    if (col < 0 || col >= COLS || row < 0 || row >= ROWS) continue;
-    if (pixelData[idx] !== targetColor) continue;
-    visited.add(idx);
-    placePixel(col, row, newColor, ME_ID);
-    queue.push([col+1,row],[col-1,row],[col,row+1],[col,row-1]);
-  }
-  startCooldown();
-}
-
-// =========================================
-//  COLOR PICKER
-// =========================================
-function pickColor(e) {
-  const px = e.target.closest('.pixel');
-  if (!px) return;
-  pickColorFromPixel(parseInt(px.dataset.i));
-}
-
-function pickColorFromPixel(i) {
-  const color = pixelData[i];
-  if (color === '#1e1e2e') return;
-  currentColor = color;
-  document.getElementById('customColor').value = color;
-  document.querySelectorAll('.color-cell').forEach(el => {
-    el.classList.toggle('selected', el.style.background === color || el.style.backgroundColor === color);
-  });
-  setTool('pen');
-  showNotif('🎨 Đã chọn màu!');
-}
-
-// =========================================
-//  TOOLTIP
-// =========================================
-function showTooltip(e) {
-  const px = e.target.closest('.pixel');
-  if (!px) return;
-  const tip = document.getElementById('tooltip');
-  tip.style.display = 'block';
-  tip.style.left = (e.clientX + 14) + 'px';
-  tip.style.top = (e.clientY - 6) + 'px';
-  tip.textContent = `(${px.dataset.col}, ${px.dataset.row}) · ${pixelData[px.dataset.i]}`;
-}
-
-// =========================================
-//  TOOLS
-// =========================================
-function setTool(tool) {
-  currentTool = tool;
-  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tool' + tool.charAt(0).toUpperCase() + tool.slice(1)).classList.add('active');
-}
-
-document.getElementById('toolPen').addEventListener('click', () => setTool('pen'));
-document.getElementById('toolEraser').addEventListener('click', () => setTool('eraser'));
-document.getElementById('toolFill').addEventListener('click', () => setTool('fill'));
-document.getElementById('toolPicker').addEventListener('click', () => setTool('picker'));
-
-document.querySelectorAll('.brush-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    brushSize = parseInt(btn.dataset.size);
-    document.querySelectorAll('.brush-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  });
-});
-
-// =========================================
-//  COOLDOWN
-// =========================================
-let cooldownInterval = null;
-
-function startCooldown() {
-  if (brushSize > 3) {
-    cooldownRemaining = COOLDOWN_MS * brushSize;
-  } else {
-    cooldownRemaining = COOLDOWN_MS;
-  }
-  updateCooldownUI();
-  if (cooldownInterval) clearInterval(cooldownInterval);
-  cooldownInterval = setInterval(() => {
-    cooldownRemaining -= 50;
-    if (cooldownRemaining <= 0) {
-      cooldownRemaining = 0;
-      clearInterval(cooldownInterval);
-    }
-    updateCooldownUI();
-  }, 50);
-}
-
-function updateCooldownUI() {
-  const fill = document.getElementById('cooldownFill');
-  const text = document.getElementById('cooldownText');
-  const max = COOLDOWN_MS * Math.max(brushSize, 1);
-  const pct = Math.max(0, (1 - cooldownRemaining / max)) * 100;
-  fill.style.width = pct + '%';
-  text.textContent = cooldownRemaining > 0 ? `${cooldownRemaining}ms...` : 'Sẵn sàng ✓';
-}
-
-// =========================================
-//  ZOOM
-// =========================================
-function zoom(factor) {
-  scale = Math.max(0.3, Math.min(3, scale * factor));
-  applyZoom();
-}
-
-function resetZoom() { scale = 1; applyZoom(); }
-
-function applyZoom() {
-  document.getElementById('canvasWrapper').style.transform = `scale(${scale})`;
-  document.getElementById('zoomDisplay').textContent = Math.round(scale * 100) + '%';
-}
-
-document.getElementById('canvasArea').addEventListener('wheel', e => {
-  e.preventDefault();
-  zoom(e.deltaY < 0 ? 1.1 : 0.9);
-}, { passive: false });
-
-// =========================================
-//  MINI MAP
-// =========================================
-function updateMiniMap(col, row, color) {
-  const canvas = document.getElementById('miniMap');
-  const ctx = canvas.getContext('2d');
-  const pw = canvas.width / COLS;
-  const ph = canvas.height / ROWS;
-  ctx.fillStyle = color;
-  ctx.fillRect(col * pw, row * ph, Math.max(1, pw), Math.max(1, ph));
-}
-
-function rebuildMiniMap() {
-  const canvas = document.getElementById('miniMap');
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#1e1e2e';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      const color = pixelData[row * COLS + col];
-      if (color !== '#1e1e2e') {
-        ctx.fillStyle = color;
-        ctx.fillRect(col * (canvas.width/COLS), row * (canvas.height/ROWS),
-          canvas.width/COLS, canvas.height/ROWS);
-      }
-    }
-  }
-}
-
-// =========================================
-//  USERS
-// =========================================
-function renderUsers() {
-  const el = document.getElementById('usersList');
-  el.innerHTML = '';
-  document.getElementById('onlineCount').textContent = users.length;
-  users.forEach(u => {
-    const div = document.createElement('div');
-    div.className = 'user-item' + (u.me ? ' me' : '');
-    div.innerHTML = `
-      <div class="user-avatar" style="background:${u.color}">${u.name[0]}</div>
-      <span class="user-name">${u.name}${u.me ? ' (bạn)' : ''}</span>
-      <span class="user-pixels">${u.pixels} px</span>
-    `;
-    el.appendChild(div);
-  });
-}
-
-document.getElementById('myName').addEventListener('input', e => {
-  const me = users.find(u => u.me);
-  if (me) {
-    me.name = e.target.value || 'Bạn';
     renderUsers();
   }
-});
 
-// =========================================
-//  ACTIVITY FEED
-// =========================================
-function addActivity(user, col, row, type) {
-  const feed = document.getElementById('activityFeed');
-  const item = document.createElement('div');
-  item.className = 'activity-item';
-  item.style.borderLeftColor = user.color;
-
-  if (type === 'joined') {
-    item.innerHTML = `<span style="color:${user.color}">${user.name}</span> đã tham gia 🟢`;
-  } else if (type === 'left') {
-    item.innerHTML = `<span style="color:${user.color}">${user.name}</span> đã rời đi 🔴`;
-  } else {
-    item.innerHTML = `<span style="color:${user.color}">${user.name}</span> <span class="coords">(${col},${row})</span>`;
+  if (m.type === 'pixel') {
+    const u = usersMap.get(m.id) || {name: m.name, color: m.color, pixels: 0, me: false};
+    u.pixels++; u.lastSeen = m.ts;
+    usersMap.set(m.id, u);
+    applyPixel(m.col, m.row, m.pixColor);
+    addFeed({name: m.name, color: m.color}, m.col, m.row, 'pixel');
+    renderUsers();
   }
 
-  feed.insertBefore(item, feed.firstChild);
-  while (feed.children.length > 40) feed.removeChild(feed.lastChild);
-}
+  if (m.type === 'leave') {
+    const u = usersMap.get(m.id);
+    if (u) { addFeed(u, -1, -1, 'left'); usersMap.delete(m.id); renderUsers(); }
+  }
 
-// =========================================
-//  BOT AI
-// =========================================
-function botTick() {
-  activeBots.forEach(bot => {
-    if (Math.random() > 0.3) return;
-    const col = Math.floor(Math.random() * COLS);
-    const row = Math.floor(Math.random() * ROWS);
-    placePixel(col, row, bot.color, bot.id);
+  if (m.type === 'sync_req') {
+    // Someone wants current canvas state
+    broadcast({ type: 'sync_res', id: myId, pixels: pixels.slice() });
+  }
+
+  if (m.type === 'sync_res' && !syncReceived) {
+    syncReceived = true;
+    pixels.splice(0, pixels.length, ...m.pixels);
+    renderFullCanvas();
+    rebuildMiniMap();
+  }
+};
+
+let syncReceived = false;
+// Request sync from other tabs
+setTimeout(() => {
+  if (BC && !syncReceived) broadcast({ type: 'sync_req', id: myId });
+}, 200);
+
+window.addEventListener('beforeunload', () => {
+  if (myId) broadcast({ type: 'leave', id: myId });
+});
+
+function cleanStaleUsers() {
+  const now = Date.now();
+  usersMap.forEach((u, id) => {
+    if (!u.me && now - u.lastSeen > 15000) {
+      addFeed(u, -1, -1, 'left');
+      usersMap.delete(id);
+    }
   });
   renderUsers();
 }
 
-// Bot join/leave simulation
-function managePopulation() {
-  const r = Math.random();
-  if (r < 0.4 && activeBots.length < 6) spawnBot();
-  else if (r > 0.7 && activeBots.length > 1) removeBot();
+// =============================================
+//  BUILD GRID
+// =============================================
+function buildGrid() {
+  const canvas = document.getElementById('pixelCanvas');
+  canvas.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < COLS * ROWS; i++) {
+    const px = document.createElement('div');
+    px.className = 'pixel';
+    px.dataset.i = i;
+    frag.appendChild(px);
+  }
+  canvas.appendChild(frag);
+
+  canvas.addEventListener('mousedown', e => { if (e.button === 0 && myId) { isDrawing = true; handleDraw(e); } });
+  canvas.addEventListener('mousemove', e => { if (myId) { if (isDrawing) handleDraw(e); showTip(e); } });
+  canvas.addEventListener('mouseup', () => isDrawing = false);
+  canvas.addEventListener('mouseleave', () => { isDrawing = false; document.getElementById('tooltip').style.display = 'none'; });
+  canvas.addEventListener('contextmenu', e => { e.preventDefault(); pickFrom(e); });
 }
 
-// =========================================
-//  CLEAR
-// =========================================
-function clearCanvas() {
-  for (let i = 0; i < COLS * ROWS; i++) pixelData[i] = '#1e1e2e';
-  document.querySelectorAll('.pixel').forEach(px => px.style.background = '#1e1e2e');
-  rebuildMiniMap();
-  showNotif('🗑 Canvas đã được xóa!');
+function renderFullCanvas() {
+  const els = document.querySelectorAll('.pixel');
+  els.forEach((px, i) => { px.style.background = pixels[i]; });
 }
 
-// =========================================
+// =============================================
+//  DRAW
+// =============================================
+function handleDraw(e) {
+  const px = e.target.closest('.pixel');
+  if (!px) return;
+  const i = parseInt(px.dataset.i);
+  const col = i % COLS, row = Math.floor(i / COLS);
+
+  if (currentTool === 'picker') { pickFromIndex(i); return; }
+
+  // Cooldown check
+  const now = Date.now();
+  if (currentTool !== 'eraser' && now < nextAllowedTime) {
+    // Flash pixel red
+    px.classList.add('locked-flash');
+    setTimeout(() => px.classList.remove('locked-flash'), 400);
+    const rem = Math.ceil((nextAllowedTime - now) / 1000);
+    showNotif(`⏳ Còn ${rem}s nữa mới được vẽ!`);
+    return;
+  }
+
+  if (currentTool === 'fill') {
+    floodFill(col, row, currentColor);
+    nextAllowedTime = now + COOLDOWN + FILL_PENALTY;
+    startCooldownTimer();
+    return;
+  }
+
+  const color = currentTool === 'eraser' ? '#1e1e2e' : currentColor;
+  placeWithBrush(col, row, color);
+
+  if (currentTool !== 'eraser') {
+    nextAllowedTime = now + COOLDOWN;
+    startCooldownTimer();
+  }
+}
+
+function placeWithBrush(cx, cy, color) {
+  const half = Math.floor(brushSize / 2);
+  for (let dy = -half; dy <= half; dy++) {
+    for (let dx = -half; dx <= half; dx++) {
+      const c = cx+dx, r = cy+dy;
+      if (c<0||c>=COLS||r<0||r>=ROWS) continue;
+      applyPixel(c, r, color);
+      broadcastPixel(c, r, color);
+    }
+  }
+  updateMyPixelCount();
+}
+
+function applyPixel(col, row, color) {
+  const i = row * COLS + col;
+  pixels[i] = color;
+  const px = document.querySelector(`.pixel[data-i="${i}"]`);
+  if (px) {
+    px.style.background = color;
+    px.classList.remove('placed');
+    void px.offsetWidth;
+    px.classList.add('placed');
+  }
+  totalPixels++;
+  document.getElementById('hTotal').textContent = totalPixels;
+  updateMiniMap(col, row, color);
+}
+
+function updateMyPixelCount() {
+  const me = usersMap.get(myId);
+  if (me) { me.pixels++; renderUsers(); }
+}
+
+// =============================================
+//  FLOOD FILL
+// =============================================
+function floodFill(sc, sr, newColor) {
+  const si = sr * COLS + sc;
+  const target = pixels[si];
+  if (target === newColor) return;
+  const queue = [[sc, sr]], visited = new Set();
+  while (queue.length) {
+    const [c, r] = queue.shift();
+    const idx = r * COLS + c;
+    if (visited.has(idx)||c<0||c>=COLS||r<0||r>=ROWS||pixels[idx]!==target) continue;
+    visited.add(idx);
+    applyPixel(c, r, newColor);
+    broadcastPixel(c, r, newColor);
+    queue.push([c+1,r],[c-1,r],[c,r+1],[c,r-1]);
+  }
+  updateMyPixelCount();
+}
+
+// =============================================
+//  COLOR PICKER
+// =============================================
+function pickFrom(e) {
+  const px = e.target.closest('.pixel'); if (!px) return;
+  pickFromIndex(parseInt(px.dataset.i));
+}
+function pickFromIndex(i) {
+  const c = pixels[i]; if (c === '#1e1e2e') return;
+  selectColor(c, null); setTool('pen');
+  showNotif('🎨 Đã hút màu ' + c);
+}
+
+// =============================================
+//  TOOLTIP
+// =============================================
+function showTip(e) {
+  const px = e.target.closest('.pixel'); if (!px) return;
+  const tip = document.getElementById('tooltip');
+  const i = parseInt(px.dataset.i);
+  tip.style.display = 'block';
+  tip.style.left = (e.clientX + 12) + 'px';
+  tip.style.top = (e.clientY - 8) + 'px';
+  tip.textContent = `(${i%COLS}, ${Math.floor(i/COLS)}) ${pixels[i]}`;
+}
+
+// =============================================
+//  TOOLS
+// =============================================
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('act'));
+  const map = {pen:'toolPen',eraser:'toolEraser',fill:'toolFill',picker:'toolPicker'};
+  document.getElementById(map[t]).classList.add('act');
+}
+document.getElementById('toolPen').onclick = () => setTool('pen');
+document.getElementById('toolEraser').onclick = () => setTool('eraser');
+document.getElementById('toolFill').onclick = () => setTool('fill');
+document.getElementById('toolPicker').onclick = () => setTool('picker');
+
+document.querySelectorAll('.bsbtn').forEach(btn => btn.onclick = () => {
+  brushSize = parseInt(btn.dataset.size);
+  document.querySelectorAll('.bsbtn').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+});
+
+// =============================================
+//  COOLDOWN TIMER (big circle)
+// =============================================
+function startCooldownTimer() {
+  if (cdInterval) clearInterval(cdInterval);
+  cdInterval = setInterval(updateCooldownUI, 100);
+  updateCooldownUI();
+}
+
+function updateCooldownUI() {
+  const now = Date.now();
+  const rem = Math.max(0, nextAllowedTime - now);
+  const prog = document.getElementById('cdProg');
+  const txt = document.getElementById('cdText');
+  const lbl = document.getElementById('cdLabel');
+  const rdy = document.getElementById('cdReady');
+
+  const total = nextAllowedTime - (nextAllowedTime - COOLDOWN); // always COOLDOWN base... use rem/COOLDOWN
+  const fraction = rem / (COOLDOWN + FILL_PENALTY); // rough
+  const offset = CIRCUMFERENCE * (rem / (COOLDOWN + FILL_PENALTY));
+
+  // dash: 0 = full circle = 30s left; CIRCUMFERENCE = empty = ready
+  const dashOffset = CIRCUMFERENCE - (CIRCUMFERENCE * (rem / COOLDOWN));
+  prog.style.strokeDashoffset = Math.max(0, Math.min(CIRCUMFERENCE, CIRCUMFERENCE * rem / COOLDOWN));
+
+  if (rem <= 0) {
+    prog.classList.add('ready');
+    prog.style.strokeDashoffset = 0;
+    txt.textContent = '✓';
+    lbl.textContent = 'SẴN SÀNG VẼ';
+    rdy.style.display = 'block';
+    clearInterval(cdInterval);
+  } else {
+    prog.classList.remove('ready');
+    const s = Math.ceil(rem / 1000);
+    txt.textContent = s + 's';
+    lbl.textContent = 'CHỜ ' + s + ' GIÂY';
+    rdy.style.display = 'none';
+  }
+}
+
+// =============================================
+//  ZOOM
+// =============================================
+function zoom(f) { scale = Math.max(0.3, Math.min(3.5, scale*f)); applyZoom(); }
+function resetZoom() { scale = 1; applyZoom(); }
+function applyZoom() {
+  document.getElementById('canvasWrapper').style.transform = `scale(${scale})`;
+  document.getElementById('hZoom').textContent = Math.round(scale*100);
+}
+document.getElementById('canvasArea').addEventListener('wheel', e => {
+  e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 0.91);
+}, {passive:false});
+
+// =============================================
+//  MINI MAP
+// =============================================
+function updateMiniMap(col, row, color) {
+  const cv = document.getElementById('miniMap');
+  const ctx = cv.getContext('2d');
+  const pw = cv.width/COLS, ph = cv.height/ROWS;
+  ctx.fillStyle = color;
+  ctx.fillRect(col*pw, row*ph, Math.max(1,pw), Math.max(1,ph));
+}
+function rebuildMiniMap() {
+  const cv = document.getElementById('miniMap');
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#1e1e2e'; ctx.fillRect(0,0,cv.width,cv.height);
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    const color = pixels[r*COLS+c];
+    if (color !== '#1e1e2e') { ctx.fillStyle=color; ctx.fillRect(c*(cv.width/COLS),r*(cv.height/ROWS),cv.width/COLS,cv.height/ROWS); }
+  }
+}
+
+// =============================================
+//  USERS
+// =============================================
+function renderUsers() {
+  const el = document.getElementById('usersList');
+  el.innerHTML = '';
+  let count = 0;
+  usersMap.forEach((u, id) => {
+    count++;
+    const d = document.createElement('div');
+    d.className = 'uitem' + (u.me ? ' me' : '');
+    d.innerHTML = `<div class="uavatar" style="background:${u.color}">${u.name[0].toUpperCase()}</div>
+      <span class="uname">${u.name}${u.me?' (bạn)':''}</span>
+      <span class="upx">${u.pixels}px</span>`;
+    el.appendChild(d);
+  });
+  document.getElementById('hOnline').textContent = count;
+}
+
+// =============================================
+//  ACTIVITY FEED
+// =============================================
+function addFeed(user, col, row, type) {
+  const feed = document.getElementById('feed');
+  const d = document.createElement('div');
+  d.className = 'fitem';
+  d.style.borderLeftColor = user.color;
+  if (type === 'joined') d.innerHTML = `<b style="color:${user.color}">${user.name}</b> đã tham gia 🟢`;
+  else if (type === 'left') d.innerHTML = `<b style="color:${user.color}">${user.name}</b> đã rời 🔴`;
+  else d.innerHTML = `<b style="color:${user.color}">${user.name}</b> <span class="fcoords">(${col},${row})</span>`;
+  feed.insertBefore(d, feed.firstChild);
+  while (feed.children.length > 50) feed.removeChild(feed.lastChild);
+}
+
+// =============================================
 //  NOTIFICATION
-// =========================================
+// =============================================
+let notifTimer = null;
 function showNotif(msg) {
-  const existing = document.querySelector('.notif');
-  if (existing) existing.remove();
-  const el = document.createElement('div');
-  el.className = 'notif';
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2100);
+  document.querySelectorAll('.notif').forEach(e=>e.remove());
+  const d = document.createElement('div');
+  d.className = 'notif'; d.textContent = msg;
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(), 2200);
 }
 
-// =========================================
+// =============================================
 //  INIT
-// =========================================
+// =============================================
+buildColorPicker();
 buildPalette();
 buildGrid();
-renderUsers();
 
-// Spawn initial bots
-setTimeout(() => spawnBot(), 800);
-setTimeout(() => spawnBot(), 1600);
-setTimeout(() => spawnBot(), 2400);
-
-// Bot drawing interval
-setInterval(botTick, 120);
-// Population management
-setInterval(managePopulation, 5000);
-
-// Draw some initial pixels
-setTimeout(() => {
-  const initColors = ['#ff3e6c','#ffd93d','#6bcb77','#4d96ff','#b967ff'];
-  for (let k = 0; k < 60; k++) {
-    const col = Math.floor(Math.random() * COLS);
-    const row = Math.floor(Math.random() * ROWS);
-    const color = initColors[Math.floor(Math.random() * initColors.length)];
-    const i = row * COLS + col;
-    pixelData[i] = color;
-    const px = document.querySelector(`.pixel[data-i="${i}"]`);
-    if (px) px.style.background = color;
-  }
-  rebuildMiniMap();
-}, 100);
-
-showNotif('🎮 Chào mừng đến PixelWar!');
+// Init cooldown display
+document.getElementById('cdText').textContent = '—';
+document.getElementById('cdLabel').textContent = 'CHỜ THAM GIA';
+document.getElementById('cdProg').style.strokeDashoffset = CIRCUMFERENCE;
 </script>
 </body>
 </html>
